@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Grow a Garden 3D</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@600;800&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #1a3a28; font-family: "Nunito", system-ui, sans-serif;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  #c { display: block; width: 100%; height: 100%; }
+  #ui { position: absolute; inset: 0; pointer-events: none; color: #fff; }
+  #ui * { pointer-events: auto; }
+  .hud-top {
+    position: absolute; top: 12px; left: 12px; right: 12px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 8px; flex-wrap: wrap;
+  }
+  .chip {
+    background: linear-gradient(180deg, rgba(20,55,35,0.92), rgba(12,35,22,0.92));
+    border: 2px solid #4ade80; border-radius: 14px; padding: 8px 14px;
+    font-weight: 800; font-size: 15px; font-family: "Fredoka", sans-serif;
+    box-shadow: 0 4px 16px #0005, inset 0 1px 0 #fff2;
+    backdrop-filter: blur(8px);
+  }
+  #prompt {
+    position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(180deg, #1a4d30ee, #0d2a1aee);
+    padding: 10px 20px; border-radius: 14px; font-weight: 800; font-size: 15px;
+    display: none; white-space: nowrap; border: 2px solid #4ade80;
+    box-shadow: 0 6px 24px #0006; font-family: "Fredoka", sans-serif;
+  }
+  #toolbar {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  }
+  .tb {
+    min-width: 56px; height: 50px; border: none; border-radius: 14px;
+    background: linear-gradient(180deg, #256b42, #1a4d30); color: #e8ffe8;
+    font-weight: 800; font-size: 12px; cursor: pointer; border: 2px solid #4ade80;
+    font-family: "Fredoka", sans-serif; box-shadow: 0 4px 0 #0d2818;
+    transition: transform 0.08s;
+  }
+  .tb:active, .tb.on { transform: translateY(2px); box-shadow: 0 2px 0 #0d2818; background: #2d8a4e; }
+  #panel {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(360px, 94vw); max-height: 78vh; overflow: auto;
+    background: linear-gradient(165deg, #1e5c38 0%, #123322 100%);
+    border: 3px solid #4ade80; border-radius: 20px; padding: 18px;
+    display: none; box-shadow: 0 20px 60px #000a, 0 0 0 1px #fff1 inset;
+    font-family: "Nunito", sans-serif;
+  }
+  #panel h2 { font-size: 20px; margin-bottom: 10px; font-family: "Fredoka", sans-serif; color: #bbf7d0; }
+  #panel h3 { font-size: 14px; margin: 12px 0 6px; color: #86efac; }
+  #panel .row {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 8px; padding: 10px 0; border-bottom: 1px solid #2a5c3c88;
+  }
+  #panel button {
+    background: linear-gradient(180deg, #fbbf24, #f59e0b); color: #1c1000;
+    border: none; border-radius: 10px; padding: 7px 12px; font-weight: 800;
+    cursor: pointer; font-family: "Fredoka", sans-serif; box-shadow: 0 3px 0 #b45309;
+  }
+  #panel button:active { transform: translateY(2px); box-shadow: 0 1px 0 #b45309; }
+  #panel .close {
+    position: absolute; top: 10px; right: 12px; background: linear-gradient(180deg, #f87171, #dc2626);
+    color: #fff; box-shadow: 0 3px 0 #991b1b; width: 36px; height: 36px; border-radius: 10px;
+  }
+  #start {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 20%, #3d9b5c 0%, #1a4d30 45%, #0a1f14 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; z-index: 20;
+  }
+  #start::before {
+    content: ""; position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23ffffff11'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  #start h1 {
+    font-size: clamp(32px, 8vw, 56px); color: #ecfdf5;
+    text-shadow: 0 4px 0 #14532d, 0 8px 24px #0006;
+    font-family: "Fredoka", sans-serif; letter-spacing: 0.02em; position: relative;
+  }
+  #start p {
+    color: #a7f3d0; text-align: center; max-width: 340px; line-height: 1.5;
+    padding: 0 16px; position: relative; font-size: 15px;
+  }
+  #start button {
+    background: linear-gradient(180deg, #fde047, #fbbf24); color: #1c1000;
+    border: none; border-radius: 16px; padding: 16px 48px; font-size: 22px;
+    font-weight: 900; cursor: pointer; font-family: "Fredoka", sans-serif;
+    box-shadow: 0 8px 0 #b45309, 0 12px 32px #0005; position: relative;
+    transition: transform 0.1s;
+  }
+  #start button:hover { filter: brightness(1.05); }
+  #start button:active { transform: translateY(4px); box-shadow: 0 4px 0 #b45309; }
+  #joy-zone {
+    position: absolute; left: 16px; bottom: 16px; width: 130px; height: 130px;
+    display: none; touch-action: none;
+  }
+  #joy-base {
+    width: 130px; height: 130px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.18), rgba(255,255,255,0.06));
+    border: 3px solid rgba(255,255,255,0.35); position: relative;
+    box-shadow: inset 0 0 20px #0003;
+  }
+  #joy-knob {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff, #a7f3d0 60%, #4ade80);
+    position: absolute; left: 36px; top: 36px; touch-action: none;
+    box-shadow: 0 4px 12px #0005;
+  }
+  #btn-zone {
+    position: absolute; right: 14px; bottom: 16px;
+    display: none; flex-direction: column; gap: 12px; align-items: flex-end;
+  }
+  .act {
+    width: 66px; height: 66px; border-radius: 50%; border: 3px solid #fff5;
+    background: radial-gradient(circle at 35% 30%, #3d9b5c, #1a4d30);
+    color: #fff; font-weight: 900; font-size: 12px; display: grid; place-items: center;
+    font-family: "Fredoka", sans-serif; box-shadow: 0 4px 12px #0005;
+  }
+  .act:active { background: #2d8a4e; transform: scale(0.95); }
+  #toast {
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(180deg, #1a4d30f0, #0d2a1af0);
+    padding: 10px 18px; border-radius: 14px; font-weight: 800;
+    display: none; z-index: 15; max-width: 90vw; text-align: center;
+    border: 2px solid #4ade80; font-family: "Fredoka", sans-serif;
+    box-shadow: 0 8px 24px #0006;
+  }
+  .hotbar {
+    position: absolute; bottom: 72px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px;
+  }
+  .slot {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(180deg, rgba(20,50,35,0.9), rgba(10,30,20,0.9));
+    border: 2px solid #4ade80; display: grid; place-items: center;
+    font-size: 20px; position: relative; cursor: pointer;
+    box-shadow: 0 3px 0 #0d2818;
+  }
+  .slot.on { border-color: #fbbf24; box-shadow: 0 0 0 3px #fbbf2488, 0 3px 0 #0d2818; }
+  .slot b {
+    position: absolute; bottom: 2px; right: 4px; font-size: 11px; color: #fff;
+    font-family: "Fredoka", sans-serif; text-shadow: 0 1px 2px #000;
+  }
+  #weather-badge {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(15,40,25,0.75); border-radius: 20px; padding: 4px 14px;
+    font-size: 13px; font-weight: 700; border: 1px solid #4ade8066;
+    font-family: "Fredoka", sans-serif; pointer-events: none;
+  }
+  @media (max-width: 900px) {
+    #joy-zone, #btn-zone { display: flex; }
+    #toolbar { bottom: 155px; }
+    .hotbar { bottom: 208px; }
+    #prompt { bottom: 250px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div class="hud-top">
+    <div class="chip" id="money">💰 100</div>
+    <div class="chip" id="level">⭐ Lv 1 · 0 XP</div>
+    <div class="chip" id="held">Cầm: Tay</div>
+  </div>
+  <div id="weather-badge">☀️ Nắng</div>
+  <div id="prompt"></div>
+  <div class="hotbar" id="hotbar"></div>
+  <div id="toolbar">
+    <button class="tb" id="btn-inv">Kho</button>
+    <button class="tb" id="btn-shop">Shop</button>
+    <button class="tb" id="btn-quest">NV</button>
+    <button class="tb" id="btn-set">Cài</button>
+  </div>
+  <div id="panel"></div>
+  <div id="toast"></div>
+  <div id="joy-zone"><div id="joy-base"><div id="joy-knob"></div></div></div>
+  <div id="btn-zone">
+    <button class="act" id="m-jump">Jump</button>
+    <button class="act" id="m-run">Run</button>
+    <button class="act" id="m-use">E</button>
+  </div>
+</div>
+<div id="start">
+  <h1>🌱 Grow a Garden</h1>
+  <p>Thế giới 3D dễ thương · Trồng cây · Thu hoạch · Khám phá<br/>WASD / joystick để di chuyển</p>
+  <button id="play">▶  Play</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from "three";
+
+/*__SAVE_INJECT__*/
+const INITIAL = window.__INITIAL_SAVE__ || null;
+
+const CROPS = {
+  carrot:      { name: "Cà rốt", seed: 10, sell: 18, grow: 16, rarity: "common", color: 0xf18a1f, leaf: 0x3c9a32, emoji: "🥕" },
+  strawberry:  { name: "Dâu tây", seed: 24, sell: 46, grow: 28, rarity: "common", color: 0xe21d45, leaf: 0x3c9a32, emoji: "🍓" },
+  tomato:      { name: "Cà chua", seed: 48, sell: 98, grow: 42, rarity: "uncommon", color: 0xef3b2f, leaf: 0x3c9a32, emoji: "🍅" },
+  blueberry:   { name: "Việt quất", seed: 80, sell: 175, grow: 60, rarity: "uncommon", color: 0x5a6fe0, leaf: 0x3c9a32, emoji: "🫐" },
+  watermelon:  { name: "Dưa hấu", seed: 160, sell: 360, grow: 90, rarity: "rare", color: 0x2f8f45, leaf: 0x2f8f45, emoji: "🍉" },
+  pumpkin:     { name: "Bí ngô", seed: 300, sell: 720, grow: 120, rarity: "epic", color: 0xee7a1a, leaf: 0x3c9a32, emoji: "🎃" },
+  dragonfruit: { name: "Thanh long", seed: 640, sell: 1600, grow: 160, rarity: "legendary", color: 0xef4e88, leaf: 0x3aaa55, emoji: "🐉" },
+  moonflower:  { name: "Hoa mặt trăng", seed: 1600, sell: 4500, grow: 220, rarity: "mythical", color: 0xd9ccff, leaf: 0x6f8f62, emoji: "🌙" },
+};
+
+function defaultSave() {
+  return {
+    coins: 100, xp: 0, level: 1,
+    seeds: { carrot: 3, strawberry: 1, tomato: 0, blueberry: 0, watermelon: 0, pumpkin: 0, dragonfruit: 0, moonflower: 0 },
+    produce: {}, plots: {},
+    tools: { watering_can: 1, shovel: 1 }, pet: null,
+    appearance: { shirt: "#3b82f6", pants: "#1e3a5f", skin: "#f5c6a5" },
+    stats: { planted: 0, harvested: 0, sold: 0 },
+    quests: { plant: 0, harvest: 0, sellCoins: 0 },
+  };
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem("gag3d-v2");
+    if (raw) {
+      const d = JSON.parse(raw);
+      const base = defaultSave();
+      return {
+        ...base, ...d,
+        seeds: { ...base.seeds, ...(d.seeds || {}) },
+        produce: { ...(d.produce || {}) },
+        plots: { ...(d.plots || {}) },
+        tools: { ...base.tools, ...(d.tools || {}) },
+        appearance: { ...base.appearance, ...(d.appearance || {}) },
+        stats: { ...base.stats, ...(d.stats || {}) },
+        quests: { plant: 0, harvest: 0, sellCoins: 0, ...(d.quests || {}) },
+      };
+    }
+  } catch {}
+  if (INITIAL) {
+    const base = defaultSave();
+    return { ...base, ...INITIAL, seeds: { ...base.seeds, ...(INITIAL.seeds || {}) }, produce: { ...(INITIAL.produce || {}) }, plots: { ...(INITIAL.plots || {}) } };
+  }
+  return defaultSave();
+}
+
+let save = loadGame();
+function persist() {
+  try { localStorage.setItem("gag3d-v2", JSON.stringify(save)); } catch {}
+}
+
+// ═══════════════ RENDERER & SCENE ═══════════════
+const canvas = document.getElementById("c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const skyDay = new THREE.Color(0x7ec8f0);
+const skyEve = new THREE.Color(0xf0a060);
+const skyNight = new THREE.Color(0x1a2040);
+scene.background = skyDay.clone();
+scene.fog = new THREE.Fog(skyDay.getHex(), 35, 85);
+
+const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 150);
+camera.position.set(0, 9, 14);
+
+// Lighting
+const hemi = new THREE.HemisphereLight(0xc8e8ff, 0x4a7c3a, 0.7);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff0d0, 1.35);
+sun.position.set(20, 32, 14);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -35; sun.shadow.camera.right = 35;
+sun.shadow.camera.top = 35; sun.shadow.camera.bottom = -35;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 90;
+sun.shadow.bias = -0.0003;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xa0c8ff, 0.25);
+fill.position.set(-12, 10, -8);
+scene.add(fill);
+const amb = new THREE.AmbientLight(0xffffff, 0.2);
+scene.add(amb);
+
+// ═══════════════ HELPERS ═══════════════
+function mat(color, opts = {}) {
+  return new THREE.MeshStandardMaterial({
+    color, roughness: opts.roughness ?? 0.7, metalness: opts.metalness ?? 0.05,
+    emissive: opts.emissive ?? 0x000000, emissiveIntensity: opts.ei ?? 0,
+    transparent: opts.transparent ?? false, opacity: opts.opacity ?? 1,
+  });
+}
+function box(w, h, d, color, opts = {}) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color, opts));
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+function cyl(rt, rb, h, color, segs = 12, opts = {}) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, segs), mat(color, opts));
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+function sphere(r, color, segs = 12, opts = {}) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, segs, segs), mat(color, opts));
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+
+const colliders = [];
+function addCollider(x, z, hw, hd) {
+  colliders.push({ minx: x - hw, maxx: x + hw, minz: z - hd, maxz: z + hd });
+}
+
+// ═══════════════ GROUND ═══════════════
+const groundGeo = new THREE.PlaneGeometry(90, 90, 1, 1);
+const ground = new THREE.Mesh(groundGeo, mat(0x4caf50, { roughness: 0.95 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Grass patches (darker / lighter checker)
+for (let i = -8; i < 9; i++) {
+  for (let j = -8; j < 9; j++) {
+    if ((i + j) % 2 !== 0) continue;
+    if (Math.abs(i) < 2 && Math.abs(j) < 2) continue;
+    const p = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.2, 5.2),
+      mat((i * j) % 3 === 0 ? 0x45a049 : 0x55b85a, { roughness: 1 })
+    );
+    p.rotation.x = -Math.PI / 2;
+    p.position.set(i * 5, 0.01, j * 5);
+    p.receiveShadow = true;
+    scene.add(p);
+  }
+}
+
+// Dirt path with stones
+const path = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 40), mat(0xc4a574, { roughness: 1 }));
+path.rotation.x = -Math.PI / 2;
+path.position.set(0, 0.025, 3);
+path.receiveShadow = true;
+scene.add(path);
+for (let i = 0; i < 18; i++) {
+  const stone = sphere(0.08 + Math.random() * 0.06, 0x9a8b78, 6);
+  stone.position.set((Math.random() - 0.5) * 3, 0.05, -8 + i * 2.2 + Math.random());
+  stone.scale.y = 0.4;
+  scene.add(stone);
+}
+
+// ═══════════════ FENCES ═══════════════
+function fencePost(x, z) {
+  const g = new THREE.Group();
+  const post = box(0.22, 1.5, 0.22, 0x8b5a2b);
+  post.position.y = 0.75;
+  g.add(post);
+  const top = box(0.28, 0.12, 0.28, 0xa06a35);
+  top.position.y = 1.5;
+  g.add(top);
+  g.position.set(x, 0, z);
+  scene.add(g);
+}
+function buildFence(x0, z0, x1, z1, step = 1.15) {
+  const dx = x1 - x0, dz = z1 - z0;
+  const len = Math.hypot(dx, dz);
+  const n = Math.max(1, Math.floor(len / step));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    fencePost(x0 + dx * t, z0 + dz * t);
+  }
+  for (const y of [0.55, 1.15]) {
+    const rail = box(len, 0.1, 0.1, 0xa06a35);
+    rail.position.set((x0 + x1) / 2, y, (z0 + z1) / 2);
+    rail.rotation.y = Math.atan2(dx, dz);
+    scene.add(rail);
+  }
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  if (Math.abs(dx) > Math.abs(dz)) addCollider(cx, cz, len / 2 + 0.2, 0.3);
+  else addCollider(cx, cz, 0.3, len / 2 + 0.2);
+}
+buildFence(-10.5, -8.5, 10.5, -8.5);
+buildFence(-10.5, -8.5, -10.5, 6.5);
+buildFence(10.5, -8.5, 10.5, 6.5);
+buildFence(-10.5, 6.5, -4, 6.5);
+buildFence(4, 6.5, 10.5, 6.5);
+
+// ═══════════════ TREES ═══════════════
+function makeTree(x, z, scale = 1, leafColor = 0x2d8f3a) {
+  const root = new THREE.Group();
+  const trunk = cyl(0.28 * scale, 0.38 * scale, 2.4 * scale, 0x6b4423, 8);
+  trunk.position.y = 1.2 * scale;
+  root.add(trunk);
+  // layered canopy
+  const layers = [
+    { y: 2.4, r: 1.5, s: 1 },
+    { y: 3.1, r: 1.2, s: 0.9 },
+    { y: 3.7, r: 0.85, s: 0.8 },
+  ];
+  for (const L of layers) {
+    const foliage = sphere(L.r * scale, leafColor, 10);
+    foliage.position.y = L.y * scale;
+    foliage.scale.set(1, L.s, 1);
+    root.add(foliage);
+  }
+  // small offset clumps
+  const clump = sphere(0.7 * scale, leafColor, 8);
+  clump.position.set(0.6 * scale, 2.6 * scale, -0.3 * scale);
+  root.add(clump);
+  root.position.set(x, 0, z);
+  scene.add(root);
+  addCollider(x, z, 0.85 * scale, 0.85 * scale);
+  return root;
+}
+makeTree(-15, -13, 1.5, 0x2d8f3a);
+makeTree(16, -11, 1.3, 0x3a9e45);
+makeTree(-17, 9, 1.2, 0x288038);
+makeTree(15, 12, 1.4, 0x2d8f3a);
+makeTree(-7, 16, 1.1, 0x3a9e45);
+makeTree(9, 17, 1.25, 0x288038);
+makeTree(-18, -2, 1.0, 0x3a9e45);
+makeTree(18, 4, 1.15, 0x2d8f3a);
+
+// Bushes
+function makeBush(x, z) {
+  const g = new THREE.Group();
+  for (let i = 0; i < 3; i++) {
+    const b = sphere(0.45 + Math.random() * 0.2, 0x3a9e45, 8);
+    b.position.set((Math.random() - 0.5) * 0.5, 0.35, (Math.random() - 0.5) * 0.5);
+    g.add(b);
+  }
+  g.position.set(x, 0, z);
+  scene.add(g);
+}
+[[-5, 12], [6, 13], [-12, -4], [11, -12], [-3, -12], [4, -14]].forEach(([x, z]) => makeBush(x, z));
+
+// Flowers
+function makeFlower(x, z, petalColor) {
+  const g = new THREE.Group();
+  const stem = cyl(0.03, 0.03, 0.35, 0x3c9a32, 5);
+  stem.position.y = 0.18;
+  g.add(stem);
+  const center = sphere(0.08, 0xf5d76e, 6);
+  center.position.y = 0.38;
+  g.add(center);
+  for (let i = 0; i < 5; i++) {
+    const p = sphere(0.07, petalColor, 5);
+    const a = (i / 5) * Math.PI * 2;
+    p.position.set(Math.cos(a) * 0.12, 0.38, Math.sin(a) * 0.12);
+    g.add(p);
+  }
+  g.position.set(x, 0, z);
+  scene.add(g);
+}
+const flowerColors = [0xff6b9d, 0xffa500, 0xc084fc, 0x60a5fa, 0xfbbf24];
+for (let i = 0; i < 25; i++) {
+  const fx = (Math.random() - 0.5) * 40;
+  const fz = (Math.random() - 0.5) * 40;
+  if (Math.hypot(fx, fz) < 6) continue;
+  makeFlower(fx, fz, flowerColors[i % flowerColors.length]);
+}
+
+// ═══════════════ POND ═══════════════
+const pondGroup = new THREE.Group();
+const water = new THREE.Mesh(
+  new THREE.CircleGeometry(4.8, 32),
+  mat(0x3a9bd5, { roughness: 0.12, metalness: 0.35, transparent: true, opacity: 0.82 })
+);
+water.rotation.x = -Math.PI / 2;
+water.position.y = 0.1;
+pondGroup.add(water);
+const shore = new THREE.Mesh(
+  new THREE.RingGeometry(4.6, 5.5, 32),
+  mat(0x8b7355, { roughness: 1 })
+);
+shore.rotation.x = -Math.PI / 2;
+shore.position.y = 0.06;
+pondGroup.add(shore);
+// lily pads
+for (let i = 0; i < 5; i++) {
+  const lily = new THREE.Mesh(
+    new THREE.CircleGeometry(0.35 + Math.random() * 0.2, 8),
+    mat(0x3d9b5c, { roughness: 0.8 })
+  );
+  lily.rotation.x = -Math.PI / 2;
+  const a = Math.random() * Math.PI * 2;
+  const r = 1 + Math.random() * 2.5;
+  lily.position.set(Math.cos(a) * r, 0.12, Math.sin(a) * r);
+  pondGroup.add(lily);
+}
+pondGroup.position.set(-13, 0, 11);
+scene.add(pondGroup);
+addCollider(-13, 11, 4.5, 4.5);
+
+// ═══════════════ CLOUDS ═══════════════
+const clouds = [];
+function makeCloud(x, y, z, s = 1) {
+  const g = new THREE.Group();
+  const parts = [[0, 0, 0, 1], [0.9, 0.15, 0.2, 0.75], [-0.8, 0.1, -0.15, 0.7], [0.3, 0.3, -0.4, 0.55]];
+  for (const [px, py, pz, sc] of parts) {
+    const c = sphere(0.8 * s * sc, 0xffffff, 8, { roughness: 1 });
+    c.position.set(px * s, py * s, pz * s);
+    c.castShadow = false;
+    g.add(c);
+  }
+  g.position.set(x, y, z);
+  scene.add(g);
+  clouds.push({ mesh: g, speed: 0.3 + Math.random() * 0.4, baseX: x });
+}
+makeCloud(-20, 16, -15, 2.2);
+makeCloud(10, 18, -25, 2.8);
+makeCloud(25, 15, 5, 1.8);
+makeCloud(-8, 17, 20, 2.4);
+makeCloud(5, 14, -8, 1.5);
+
+// ═══════════════ SHOP BUILDING ═══════════════
+const shop = new THREE.Group();
+const shopBase = box(6.2, 3.2, 5.2, 0xf5e6c8);
+shopBase.position.y = 1.6;
+shop.add(shopBase);
+// door
+const door = box(1.2, 2.0, 0.15, 0x8b5a2b);
+door.position.set(0, 1.0, 2.65);
+shop.add(door);
+const doorKnob = sphere(0.08, 0xfbbf24, 6);
+doorKnob.position.set(0.4, 1.0, 2.75);
+shop.add(doorKnob);
+// windows
+for (const wx of [-1.8, 1.8]) {
+  const win = box(1.0, 1.0, 0.12, 0x7dd3fc, { metalness: 0.3, roughness: 0.3 });
+  win.position.set(wx, 2.0, 2.65);
+  shop.add(win);
+  const frame = box(1.15, 1.15, 0.08, 0x8b5a2b);
+  frame.position.set(wx, 2.0, 2.62);
+  shop.add(frame);
+}
+// roof
+const roof = new THREE.Mesh(
+  new THREE.ConeGeometry(4.8, 2.0, 4),
+  mat(0xdc2626, { roughness: 0.65 })
+);
+roof.position.y = 4.2;
+roof.rotation.y = Math.PI / 4;
+roof.castShadow = true;
+shop.add(roof);
+// awning
+const awning = box(6.4, 0.12, 1.6, 0xf59e0b);
+awning.position.set(0, 2.7, 2.9);
+shop.add(awning);
+const awningPoleL = cyl(0.05, 0.05, 2.5, 0x8b5a2b, 6);
+awningPoleL.position.set(-2.8, 1.25, 3.5);
+shop.add(awningPoleL);
+const awningPoleR = awningPoleL.clone();
+awningPoleR.position.x = 2.8;
+shop.add(awningPoleR);
+// sign
+const sign = box(2.5, 0.7, 0.12, 0xfef3c7);
+sign.position.set(0, 3.5, 2.7);
+shop.add(sign);
+shop.position.set(13, 0, 2);
+scene.add(shop);
+addCollider(13, 2, 3.3, 2.9);
+
+// ═══════════════ NPC ═══════════════
+function makeNPC(x, z, shirtColor, name, hatColor = null) {
+  const g = new THREE.Group();
+  const legs = box(0.55, 0.7, 0.35, 0x1e3a5f);
+  legs.position.y = 0.35;
+  g.add(legs);
+  const body = box(0.7, 0.95, 0.42, shirtColor);
+  body.position.y = 1.1;
+  g.add(body);
+  const head = box(0.55, 0.55, 0.55, 0xf5c6a5);
+  head.position.y = 1.85;
+  g.add(head);
+  // eyes
+  const eyeL = box(0.1, 0.12, 0.06, 0x1a1a1a);
+  eyeL.position.set(-0.12, 1.9, 0.28);
+  g.add(eyeL);
+  const eyeR = eyeL.clone();
+  eyeR.position.x = 0.12;
+  g.add(eyeR);
+  // smile
+  const smile = box(0.22, 0.05, 0.05, 0xc45c5c);
+  smile.position.set(0, 1.72, 0.28);
+  g.add(smile);
+  // arms
+  const armL = box(0.22, 0.7, 0.22, shirtColor);
+  armL.position.set(-0.48, 1.05, 0);
+  g.add(armL);
+  const armR = armL.clone();
+  armR.position.x = 0.48;
+  g.add(armR);
+  if (hatColor !== null) {
+    const hat = cyl(0.35, 0.35, 0.2, hatColor, 10);
+    hat.position.y = 2.2;
+    g.add(hat);
+    const brim = cyl(0.5, 0.5, 0.06, hatColor, 10);
+    brim.position.y = 2.1;
+    g.add(brim);
+  }
+  g.position.set(x, 0, z);
+  g.userData = { npc: name };
+  scene.add(g);
+  addCollider(x, z, 0.5, 0.5);
+  return g;
+}
+const vendor = makeNPC(13, 5.4, 0xe67e22, "shop", 0xdc2626);
+const buyer = makeNPC(-2, 8.5, 0x8e44ad, "buyer", 0xfbbf24);
+
+// ═══════════════ GARDEN PLOTS ═══════════════
+const PLOT_ORIGIN = { x: -6.2, z: -5.2 };
+const PLOT_SIZE = 1.7;
+const PLOT_GAP = 0.4;
+const plotMeshes = {};
+const plantGroups = {};
+
+function plotKey(i, j) { return `${i},${j}`; }
+
+for (let i = 0; i < 3; i++) {
+  for (let j = 0; j < 3; j++) {
+    const x = PLOT_ORIGIN.x + i * (PLOT_SIZE + PLOT_GAP);
+    const z = PLOT_ORIGIN.z + j * (PLOT_SIZE + PLOT_GAP);
+    // raised bed frame
+    const frame = box(PLOT_SIZE + 0.15, 0.35, PLOT_SIZE + 0.15, 0x6b4423);
+    frame.position.set(x, 0.15, z);
+    scene.add(frame);
+    const soil = box(PLOT_SIZE, 0.2, PLOT_SIZE, 0x7a4a28);
+    soil.position.set(x, 0.28, z);
+    soil.userData = { plot: true, i, j };
+    scene.add(soil);
+    plotMeshes[plotKey(i, j)] = soil;
+  }
+}
+
+function stageOf(p) {
+  if (p >= 1) return 3;
+  if (p >= 0.55) return 2;
+  if (p >= 0.22) return 1;
+  return 0;
+}
+
+function buildPlantMesh(cropId, stage) {
+  const def = CROPS[cropId];
+  const g = new THREE.Group();
+  if (stage === 0) {
+    const mound = sphere(0.18, 0x8b5a2b, 8);
+    mound.scale.y = 0.4;
+    mound.position.y = 0.05;
+    g.add(mound);
+    const seed = sphere(0.07, 0xc9a06a, 6);
+    seed.position.y = 0.12;
+    g.add(seed);
+  } else if (stage === 1) {
+    const stem = cyl(0.04, 0.05, 0.4, def.leaf, 6);
+    stem.position.y = 0.25;
+    g.add(stem);
+    const leaf = box(0.28, 0.05, 0.14, def.leaf);
+    leaf.position.set(0.12, 0.4, 0);
+    leaf.rotation.z = -0.3;
+    g.add(leaf);
+    const leaf2 = leaf.clone();
+    leaf2.position.x = -0.1;
+    leaf2.rotation.z = 0.3;
+    g.add(leaf2);
+  } else if (stage === 2) {
+    const stem = cyl(0.05, 0.06, 0.65, def.leaf, 6);
+    stem.position.y = 0.4;
+    g.add(stem);
+    for (let i = 0; i < 3; i++) {
+      const leaf = box(0.3, 0.06, 0.16, def.leaf);
+      const a = (i / 3) * Math.PI * 2;
+      leaf.position.set(Math.cos(a) * 0.15, 0.5 + i * 0.08, Math.sin(a) * 0.15);
+      g.add(leaf);
+    }
+    const fruit = sphere(0.2, def.color, 10);
+    fruit.position.y = 0.75;
+    g.add(fruit);
+  } else {
+    // mature – crop-specific flair
+    const stem = cyl(0.055, 0.07, 0.75, def.leaf, 6);
+    stem.position.y = 0.45;
+    g.add(stem);
+    for (let i = 0; i < 4; i++) {
+      const leaf = box(0.35, 0.07, 0.18, def.leaf);
+      const a = (i / 4) * Math.PI * 2;
+      leaf.position.set(Math.cos(a) * 0.2, 0.55, Math.sin(a) * 0.2);
+      g.add(leaf);
+    }
+    if (cropId === "carrot") {
+      const root = cyl(0.12, 0.04, 0.5, def.color, 8);
+      root.position.y = 0.15;
+      g.add(root);
+      const tops = sphere(0.2, def.leaf, 8);
+      tops.position.y = 0.55;
+      g.add(tops);
+    } else if (cropId === "watermelon") {
+      const fruit = sphere(0.4, def.color, 12);
+      fruit.position.y = 0.45;
+      g.add(fruit);
+      const stripe = cyl(0.41, 0.41, 0.08, 0x1a5c28, 12);
+      stripe.position.y = 0.45;
+      g.add(stripe);
+    } else if (cropId === "pumpkin") {
+      const fruit = sphere(0.42, def.color, 12);
+      fruit.position.y = 0.5;
+      fruit.scale.set(1.15, 0.9, 1.15);
+      g.add(fruit);
+      const stemTop = cyl(0.06, 0.08, 0.2, 0x3c9a32, 6);
+      stemTop.position.y = 0.85;
+      g.add(stemTop);
+    } else if (cropId === "moonflower") {
+      const flower = sphere(0.35, def.color, 12, { emissive: def.color, ei: 0.45 });
+      flower.position.y = 0.9;
+      g.add(flower);
+      for (let i = 0; i < 6; i++) {
+        const petal = sphere(0.15, 0xe8deff, 8, { emissive: 0xb8a0ff, ei: 0.3 });
+        const a = (i / 6) * Math.PI * 2;
+        petal.position.set(Math.cos(a) * 0.35, 0.9, Math.sin(a) * 0.35);
+        g.add(petal);
+      }
+    } else if (cropId === "dragonfruit") {
+      const fruit = sphere(0.32, def.color, 10, { emissive: 0xef4e88, ei: 0.15 });
+      fruit.position.y = 0.85;
+      g.add(fruit);
+      for (let i = 0; i < 4; i++) {
+        const scale = box(0.08, 0.2, 0.04, 0x3aaa55);
+        const a = (i / 4) * Math.PI * 2;
+        scale.position.set(Math.cos(a) * 0.25, 1.05, Math.sin(a) * 0.25);
+        g.add(scale);
+      }
+    } else {
+      const fruit = sphere(0.28, def.color, 10);
+      fruit.position.y = 0.85;
+      g.add(fruit);
+      // second fruit
+      const f2 = sphere(0.2, def.color, 8);
+      f2.position.set(0.2, 0.7, 0.1);
+      g.add(f2);
+    }
+    // ready glow ring
+    const glow = new THREE.Mesh(
+      new THREE.RingGeometry(0.5, 0.65, 24),
+      mat(0xfbbf24, { emissive: 0xfbbf24, ei: 0.5, transparent: true, opacity: 0.7, roughness: 0.5 })
+    );
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.y = 0.08;
+    glow.name = "readyGlow";
+    g.add(glow);
+  }
+  return g;
+}
+
+function refreshPlotVisual(key) {
+  if (plantGroups[key]) {
+    scene.remove(plantGroups[key]);
+    plantGroups[key] = null;
+  }
+  const data = save.plots[key];
+  if (!data) return;
+  const [is, js] = key.split(",").map(Number);
+  const x = PLOT_ORIGIN.x + is * (PLOT_SIZE + PLOT_GAP);
+  const z = PLOT_ORIGIN.z + js * (PLOT_SIZE + PLOT_GAP);
+  const elapsed = (Date.now() - data.plantedAt) / 1000 + (data.boost || 0);
+  const progress = Math.min(1, elapsed / CROPS[data.crop].grow);
+  const stage = stageOf(progress);
+  const mesh = buildPlantMesh(data.crop, stage);
+  mesh.position.set(x, 0.35, z);
+  scene.add(mesh);
+  plantGroups[key] = mesh;
+  data._progress = progress;
+  data._stage = stage;
+}
+function refreshAllPlots() {
+  for (const key of Object.keys(save.plots)) refreshPlotVisual(key);
+}
+refreshAllPlots();
+
+// ═══════════════ PLAYER ═══════════════
+const player = new THREE.Group();
+const shirtC = new THREE.Color(save.appearance.shirt);
+const pantsC = new THREE.Color(save.appearance.pants);
+const skinC = new THREE.Color(save.appearance.skin);
+
+const torso = box(0.75, 0.95, 0.42, shirtC.getHex());
+torso.position.y = 1.2;
+player.add(torso);
+const head = box(0.58, 0.58, 0.58, skinC.getHex());
+head.position.y = 1.92;
+player.add(head);
+// face
+const eyeL = box(0.1, 0.12, 0.06, 0x1a1a1a);
+eyeL.position.set(-0.13, 1.96, 0.3);
+player.add(eyeL);
+const eyeR = eyeL.clone();
+eyeR.position.x = 0.13;
+player.add(eyeR);
+const smile = box(0.2, 0.05, 0.05, 0xc45c5c);
+smile.position.set(0, 1.78, 0.3);
+player.add(smile);
+// hair tuft
+const hair = box(0.6, 0.15, 0.6, 0x3d2314);
+hair.position.y = 2.25;
+player.add(hair);
+
+const armL = box(0.26, 0.78, 0.26, shirtC.getHex());
+armL.position.set(-0.52, 1.15, 0);
+player.add(armL);
+const armR = box(0.26, 0.78, 0.26, shirtC.getHex());
+armR.position.set(0.52, 1.15, 0);
+player.add(armR);
+const legL = box(0.3, 0.78, 0.3, pantsC.getHex());
+legL.position.set(-0.2, 0.4, 0);
+player.add(legL);
+const legR = box(0.3, 0.78, 0.3, pantsC.getHex());
+legR.position.set(0.2, 0.4, 0);
+player.add(legR);
+// shoes
+const shoeL = box(0.32, 0.14, 0.4, 0x1a1a1a);
+shoeL.position.set(-0.2, 0.07, 0.05);
+player.add(shoeL);
+const shoeR = shoeL.clone();
+shoeR.position.x = 0.2;
+player.add(shoeR);
+
+player.position.set(0, 0, 9);
+scene.add(player);
+
+const heldGroup = new THREE.Group();
+heldGroup.position.set(0.55, 1.05, 0.25);
+player.add(heldGroup);
+
+function setHeldVisual(item) {
+  while (heldGroup.children.length) heldGroup.remove(heldGroup.children[0]);
+  if (item === "watering_can") {
+    const can = box(0.28, 0.3, 0.2, 0x3498db);
+    heldGroup.add(can);
+    const spout = cyl(0.04, 0.04, 0.25, 0x2980b9, 6);
+    spout.rotation.z = Math.PI / 3;
+    spout.position.set(0.2, 0.1, 0);
+    heldGroup.add(spout);
+  } else if (item === "shovel") {
+    const handle = box(0.06, 0.55, 0.06, 0x8b5a2b);
+    handle.position.y = 0.15;
+    heldGroup.add(handle);
+    const blade = box(0.2, 0.22, 0.04, 0x95a5a6, { metalness: 0.5, roughness: 0.35 });
+    blade.position.y = -0.18;
+    heldGroup.add(blade);
+  } else if (item && CROPS[item]) {
+    const bag = box(0.22, 0.22, 0.14, CROPS[item].color);
+    heldGroup.add(bag);
+  }
+}
+
+// Pet
+let petMesh = null;
+function spawnPet() {
+  if (petMesh) { scene.remove(petMesh); petMesh = null; }
+  if (!save.pet) return;
+  const g = new THREE.Group();
+  const body = box(0.55, 0.4, 0.75, 0xf5d0a0);
+  body.position.y = 0.38;
+  g.add(body);
+  const head = box(0.4, 0.38, 0.38, 0xf5d0a0);
+  head.position.set(0, 0.6, 0.42);
+  g.add(head);
+  const earL = box(0.12, 0.35, 0.08, 0xe8b87a);
+  earL.position.set(-0.14, 0.9, 0.42);
+  g.add(earL);
+  const earR = earL.clone();
+  earR.position.x = 0.14;
+  g.add(earR);
+  const nose = sphere(0.06, 0x333, 6);
+  nose.position.set(0, 0.55, 0.62);
+  g.add(nose);
+  const tail = sphere(0.12, 0xf5d0a0, 6);
+  tail.position.set(0, 0.4, -0.45);
+  g.add(tail);
+  scene.add(g);
+  petMesh = g;
+}
+spawnPet();
+
+// ═══════════════ PARTICLES ═══════════════
+const particles = [];
+function spawnBurst(x, y, z, color, count = 12) {
+  for (let i = 0; i < count; i++) {
+    const p = sphere(0.06 + Math.random() * 0.05, color, 5);
+    p.position.set(x, y, z);
+    scene.add(p);
+    particles.push({
+      mesh: p,
+      vx: (Math.random() - 0.5) * 3,
+      vy: 1.5 + Math.random() * 3,
+      vz: (Math.random() - 0.5) * 3,
+      life: 0.6 + Math.random() * 0.5,
+    });
+  }
+}
+function spawnWaterDrops(x, z) {
+  for (let i = 0; i < 10; i++) {
+    const p = sphere(0.05, 0x60a5fa, 5, { transparent: true, opacity: 0.8 });
+    p.position.set(x + (Math.random() - 0.5) * 0.5, 1.2, z + (Math.random() - 0.5) * 0.5);
+    scene.add(p);
+    particles.push({
+      mesh: p,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: -0.5 - Math.random(),
+      vz: (Math.random() - 0.5) * 0.5,
+      life: 0.5,
+    });
+  }
+}
+
+// ═══════════════ INPUT ═══════════════
+const keys = {};
+const mouse = { down: false, lx: 0, ly: 0 };
+let yaw = 0, pitch = 0.28;
+let velY = 0, onGround = true;
+let running = false;
+let joy = { x: 0, y: 0, active: false };
+let heldItem = null;
+let animT = 0;
+let weather = "sunny"; // sunny | rain | night
+let weatherT = 0;
+
+window.addEventListener("keydown", (e) => {
+  keys[e.code] = true;
+  if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
+  if (e.code === "KeyE") tryInteract();
+  if (e.code === "ShiftLeft" || e.code === "ShiftRight") running = true;
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= 8) {
+    const ids = Object.keys(CROPS);
+    const id = ids[n - 1];
+    if ((save.seeds[id] || 0) > 0) { heldItem = id; setHeldVisual(id); updateHeldLabel(); buildHotbar(); }
+  }
+  if (e.key === "q" || e.key === "Q") { heldItem = "watering_can"; setHeldVisual(heldItem); updateHeldLabel(); }
+});
+window.addEventListener("keyup", (e) => {
+  keys[e.code] = false;
+  if (e.code === "ShiftLeft" || e.code === "ShiftRight") running = false;
+});
+
+canvas.addEventListener("mousedown", (e) => {
+  if (document.getElementById("start").style.display !== "none") return;
+  mouse.down = true; mouse.lx = e.clientX; mouse.ly = e.clientY;
+  canvas.requestPointerLock?.();
+});
+window.addEventListener("mouseup", () => { mouse.down = false; });
+window.addEventListener("mousemove", (e) => {
+  if (document.pointerLockElement === canvas) {
+    yaw -= e.movementX * 0.0025;
+    pitch = Math.max(-0.15, Math.min(0.75, pitch - e.movementY * 0.002));
+  } else if (mouse.down) {
+    yaw -= (e.clientX - mouse.lx) * 0.005;
+    pitch = Math.max(-0.15, Math.min(0.75, pitch - (e.clientY - mouse.ly) * 0.004));
+    mouse.lx = e.clientX; mouse.ly = e.clientY;
+  }
+});
+
+let touchLook = null;
+canvas.addEventListener("touchstart", (e) => {
+  for (const t of e.changedTouches) {
+    if (t.clientX > innerWidth * 0.45) touchLook = { id: t.identifier, x: t.clientX, y: t.clientY };
+  }
+}, { passive: true });
+canvas.addEventListener("touchmove", (e) => {
+  for (const t of e.changedTouches) {
+    if (touchLook && t.identifier === touchLook.id) {
+      yaw -= (t.clientX - touchLook.x) * 0.006;
+      pitch = Math.max(-0.15, Math.min(0.75, pitch - (t.clientY - touchLook.y) * 0.005));
+      touchLook.x = t.clientX; touchLook.y = t.clientY;
+    }
+  }
+}, { passive: true });
+canvas.addEventListener("touchend", (e) => {
+  for (const t of e.changedTouches) {
+    if (touchLook && t.identifier === touchLook.id) touchLook = null;
+  }
+});
+
+const joyZone = document.getElementById("joy-zone");
+const joyKnob = document.getElementById("joy-knob");
+function setJoy(x, y) {
+  const r = 36;
+  const len = Math.hypot(x, y) || 1;
+  const nx = x / len * Math.min(len, r);
+  const ny = y / len * Math.min(len, r);
+  joyKnob.style.left = 36 + nx + "px";
+  joyKnob.style.top = 36 + ny + "px";
+  joy.x = nx / r; joy.y = ny / r;
+}
+function resetJoy() {
+  joy.x = 0; joy.y = 0; joy.active = false;
+  joyKnob.style.left = "36px"; joyKnob.style.top = "36px";
+}
+joyZone.addEventListener("touchstart", (e) => {
+  e.preventDefault(); joy.active = true;
+  const t = e.changedTouches[0];
+  const rect = joyZone.getBoundingClientRect();
+  setJoy(t.clientX - rect.left - 65, t.clientY - rect.top - 65);
+}, { passive: false });
+joyZone.addEventListener("touchmove", (e) => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  const rect = joyZone.getBoundingClientRect();
+  setJoy(t.clientX - rect.left - 65, t.clientY - rect.top - 65);
+}, { passive: false });
+joyZone.addEventListener("touchend", () => resetJoy());
+
+document.getElementById("m-jump").addEventListener("touchstart", (e) => { e.preventDefault(); keys["Space"] = true; });
+document.getElementById("m-jump").addEventListener("touchend", () => { keys["Space"] = false; });
+document.getElementById("m-run").addEventListener("touchstart", (e) => { e.preventDefault(); running = true; });
+document.getElementById("m-run").addEventListener("touchend", () => { running = false; });
+document.getElementById("m-use").addEventListener("touchstart", (e) => { e.preventDefault(); tryInteract(); });
+
+const PLAYER_R = 0.4;
+function blocked(nx, nz) {
+  if (Math.abs(nx) > 40 || Math.abs(nz) > 40) return true;
+  for (const c of colliders) {
+    if (nx > c.minx - PLAYER_R && nx < c.maxx + PLAYER_R && nz > c.minz - PLAYER_R && nz < c.maxz + PLAYER_R)
+      return true;
+  }
+  return false;
+}
+
+function dist2(a, b) {
+  const dx = a.x - b.x, dz = a.z - b.z;
+  return dx * dx + dz * dz;
+}
+function nearestPlot() {
+  let best = null, bestD = 2.3 * 2.3;
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    const x = PLOT_ORIGIN.x + i * (PLOT_SIZE + PLOT_GAP);
+    const z = PLOT_ORIGIN.z + j * (PLOT_SIZE + PLOT_GAP);
+    const d = dist2(player.position, { x, z });
+    if (d < bestD) { bestD = d; best = { i, j, key: plotKey(i, j), x, z }; }
+  }
+  return best;
+}
+function nearShop() { return dist2(player.position, { x: 13, z: 5.4 }) < 12; }
+function nearBuyer() { return dist2(player.position, { x: -2, z: 8.5 }) < 9; }
+
+function tryInteract() {
+  if (nearShop()) { openPanel("shop"); return; }
+  if (nearBuyer()) { openPanel("sell"); return; }
+  const p = nearestPlot();
+  if (!p) { toast("Đến gần ô đất, shop hoặc NPC"); return; }
+  const data = save.plots[p.key];
+  if (!data) {
+    if (!heldItem || !CROPS[heldItem]) {
+      toast("Chọn hạt ở hotbar (1-8) rồi nhấn E");
+      openPanel("plant");
+      return;
+    }
+    if ((save.seeds[heldItem] || 0) <= 0) { toast("Hết hạt " + CROPS[heldItem].name); return; }
+    save.seeds[heldItem]--;
+    save.plots[p.key] = { crop: heldItem, plantedAt: Date.now(), boost: 0, watered: 0 };
+    save.stats.planted++;
+    save.quests.plant = (save.quests.plant || 0) + 1;
+    save.xp += 2;
+    levelCheck();
+    refreshPlotVisual(p.key);
+    spawnBurst(p.x, 0.5, p.z, 0xc9a06a, 8);
+    persist(); updateHUD(); buildHotbar();
+    toast("Đã gieo " + CROPS[heldItem].name + "!");
+    return;
+  }
+  const elapsed = (Date.now() - data.plantedAt) / 1000 + (data.boost || 0);
+  const progress = Math.min(1, elapsed / CROPS[data.crop].grow);
+  if (progress >= 1) {
+    const crop = data.crop;
+    save.produce[crop] = (save.produce[crop] || 0) + 1;
+    delete save.plots[p.key];
+    if (plantGroups[p.key]) { scene.remove(plantGroups[p.key]); delete plantGroups[p.key]; }
+    save.stats.harvested++;
+    save.quests.harvest = (save.quests.harvest || 0) + 1;
+    save.xp += 8;
+    levelCheck();
+    spawnBurst(p.x, 0.8, p.z, CROPS[crop].color, 16);
+    persist(); updateHUD();
+    toast("Thu hoạch " + CROPS[crop].name + "!");
+    return;
+  }
+  if (heldItem === "watering_can" || !heldItem) {
+    if ((data.watered || 0) >= 3) { toast("Cây đã đủ nước"); return; }
+    data.watered = (data.watered || 0) + 1;
+    data.boost = (data.boost || 0) + CROPS[data.crop].grow * 0.2;
+    refreshPlotVisual(p.key);
+    spawnWaterDrops(p.x, p.z);
+    persist();
+    toast("Tưới nước (+20% tốc độ)");
+  } else {
+    toast(CROPS[data.crop].name + " " + Math.floor(progress * 100) + "%");
+  }
+}
+
+function levelCheck() {
+  const need = 40 + save.level * 30;
+  while (save.xp >= need) {
+    save.xp -= need;
+    save.level++;
+    save.coins += 25 * save.level;
+    toast("🎉 Lên cấp " + save.level + "!");
+  }
+}
+
+// ═══════════════ UI ═══════════════
+const panel = document.getElementById("panel");
+function openPanel(mode) {
+  panel.style.display = "block";
+  if (mode === "shop") {
+    let html = `<button class="close" id="pc">✕</button><h2>🛒 Cửa hàng</h2>`;
+    for (const [id, c] of Object.entries(CROPS)) {
+      html += `<div class="row"><span>${c.emoji} ${c.name}<br><small style="opacity:.7">${c.rarity} · ${c.grow}s · bán ${c.sell}</small></span>
+        <button data-buy="${id}">${c.seed}💰</button></div>`;
+    }
+    html += `<div class="row"><span>🐰 Thỏ (+15% tốc độ cây)</span><button data-pet="bunny">180💰</button></div>`;
+    html += `<div class="row"><span>🎨 Áo</span>
+      <span><button data-shirt="#e74c3c">Đỏ</button>
+      <button data-shirt="#3b82f6">Xanh</button>
+      <button data-shirt="#f1c40f">Vàng</button></span></div>`;
+    panel.innerHTML = html;
+  } else if (mode === "sell") {
+    let html = `<button class="close" id="pc">✕</button><h2>💰 Bán nông sản</h2>`;
+    const keys = Object.keys(save.produce).filter(k => save.produce[k] > 0);
+    if (!keys.length) html += `<p style="opacity:.8">Chưa có nông sản.</p>`;
+    for (const id of keys) {
+      const c = CROPS[id];
+      const n = save.produce[id];
+      html += `<div class="row"><span>${c.emoji} ${c.name} ×${n}</span>
+        <button data-sell="${id}">${c.sell * n}💰</button></div>`;
+    }
+    if (keys.length) html += `<div class="row"><button data-sellall="1">Bán tất cả</button></div>`;
+    panel.innerHTML = html;
+  } else if (mode === "inv") {
+    let html = `<button class="close" id="pc">✕</button><h2>🎒 Kho đồ</h2><h3>Hạt giống</h3>`;
+    for (const [id, n] of Object.entries(save.seeds)) {
+      if (n <= 0) continue;
+      html += `<div class="row"><span>${CROPS[id].emoji} ${CROPS[id].name} ×${n}</span><button data-hold="${id}">Cầm</button></div>`;
+    }
+    html += `<h3>Nông sản</h3>`;
+    let hasP = false;
+    for (const [id, n] of Object.entries(save.produce)) {
+      if (n <= 0) continue;
+      hasP = true;
+      html += `<div class="row"><span>${CROPS[id].emoji} ${CROPS[id].name} ×${n}</span></div>`;
+    }
+    if (!hasP) html += `<p style="opacity:.7">Trống</p>`;
+    html += `<h3>Dụng cụ</h3>
+      <div class="row"><span>💧 Bình tưới</span><button data-hold="watering_can">Cầm</button></div>
+      <div class="row"><span>🪓 Xẻng</span><button data-hold="shovel">Cầm</button></div>`;
+    panel.innerHTML = html;
+  } else if (mode === "quest") {
+    panel.innerHTML = `<button class="close" id="pc">✕</button><h2>📜 Nhiệm vụ</h2>
+      <div class="row"><span>Gieo 5 cây</span><span>${Math.min(5, save.quests.plant || 0)}/5</span></div>
+      <div class="row"><span>Thu hoạch 5 cây</span><span>${Math.min(5, save.quests.harvest || 0)}/5</span></div>
+      <div class="row"><span>Bán được 200💰</span><span>${Math.min(200, save.quests.sellCoins || 0)}/200</span></div>
+      <button id="claimq" style="margin-top:12px;width:100%">Nhận thưởng</button>`;
+  } else if (mode === "plant") {
+    let html = `<button class="close" id="pc">✕</button><h2>🌱 Chọn hạt</h2>`;
+    for (const [id, n] of Object.entries(save.seeds)) {
+      if (n <= 0) continue;
+      html += `<div class="row"><span>${CROPS[id].emoji} ${CROPS[id].name} ×${n}</span><button data-hold="${id}">Chọn</button></div>`;
+    }
+    panel.innerHTML = html;
+  } else if (mode === "set") {
+    panel.innerHTML = `<button class="close" id="pc">✕</button><h2>⚙️ Cài đặt</h2>
+      <div class="row"><button id="reset-save">Xóa tiến trình</button></div>
+      <p style="opacity:.75;margin-top:10px;font-size:13px;line-height:1.4">
+        WASD · Shift · Space · E · Chuột xoay camera<br/>
+        Mobile: joystick + nút Jump/Run/E
+      </p>`;
+  }
+  document.getElementById("pc")?.addEventListener("click", () => { panel.style.display = "none"; });
+  panel.querySelectorAll("[data-buy]").forEach((btn) => {
+    btn.onclick = () => {
+      const id = btn.getAttribute("data-buy");
+      const c = CROPS[id];
+      if (save.coins < c.seed) { toast("Không đủ tiền"); return; }
+      save.coins -= c.seed;
+      save.seeds[id] = (save.seeds[id] || 0) + 1;
+      persist(); updateHUD(); buildHotbar(); toast("Mua 1 " + c.name);
+    };
+  });
+  panel.querySelectorAll("[data-sell]").forEach((btn) => {
+    btn.onclick = () => {
+      const id = btn.getAttribute("data-sell");
+      const n = save.produce[id] || 0;
+      if (!n) return;
+      const earn = CROPS[id].sell * n;
+      save.coins += earn;
+      save.quests.sellCoins = (save.quests.sellCoins || 0) + earn;
+      save.stats.sold += n;
+      save.produce[id] = 0;
+      save.xp += Math.floor(earn / 10);
+      levelCheck();
+      persist(); updateHUD(); openPanel("sell"); toast("+" + earn + "💰");
+    };
+  });
+  panel.querySelector("[data-sellall]")?.addEventListener("click", () => {
+    let earn = 0;
+    for (const [id, n] of Object.entries(save.produce)) {
+      if (n > 0) { earn += CROPS[id].sell * n; save.stats.sold += n; save.produce[id] = 0; }
+    }
+    if (!earn) return;
+    save.coins += earn;
+    save.quests.sellCoins = (save.quests.sellCoins || 0) + earn;
+    save.xp += Math.floor(earn / 10);
+    levelCheck();
+    persist(); updateHUD(); openPanel("sell"); toast("+" + earn + "💰");
+  });
+  panel.querySelectorAll("[data-hold]").forEach((btn) => {
+    btn.onclick = () => {
+      heldItem = btn.getAttribute("data-hold");
+      setHeldVisual(heldItem);
+      updateHeldLabel(); buildHotbar();
+      panel.style.display = "none";
+      toast("Cầm: " + (CROPS[heldItem]?.name || heldItem));
+    };
+  });
+  panel.querySelector("[data-pet]")?.addEventListener("click", () => {
+    if (save.pet) { toast("Đã có thú cưng"); return; }
+    if (save.coins < 180) { toast("Không đủ tiền"); return; }
+    save.coins -= 180; save.pet = "bunny";
+    spawnPet(); persist(); updateHUD(); toast("🐰 Thỏ đã theo bạn!");
+  });
+  panel.querySelectorAll("[data-shirt]").forEach((btn) => {
+    btn.onclick = () => {
+      save.appearance.shirt = btn.getAttribute("data-shirt");
+      torso.material.color.set(save.appearance.shirt);
+      armL.material.color.set(save.appearance.shirt);
+      armR.material.color.set(save.appearance.shirt);
+      persist();
+    };
+  });
+  document.getElementById("claimq")?.addEventListener("click", () => {
+    let reward = 0;
+    if ((save.quests.plant || 0) >= 5 && !save.quests._p) { reward += 50; save.quests._p = 1; }
+    if ((save.quests.harvest || 0) >= 5 && !save.quests._h) { reward += 60; save.quests._h = 1; }
+    if ((save.quests.sellCoins || 0) >= 200 && !save.quests._s) { reward += 80; save.quests._s = 1; }
+    if (reward) { save.coins += reward; persist(); updateHUD(); toast("Thưởng +" + reward + "💰"); }
+    else toast("Chưa đủ hoặc đã nhận");
+  });
+  document.getElementById("reset-save")?.addEventListener("click", () => {
+    localStorage.removeItem("gag3d-v2");
+    save = defaultSave();
+    location.reload();
+  });
+}
+
+document.getElementById("btn-inv").onclick = () => openPanel("inv");
+document.getElementById("btn-shop").onclick = () => openPanel("shop");
+document.getElementById("btn-quest").onclick = () => openPanel("quest");
+document.getElementById("btn-set").onclick = () => openPanel("set");
+
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.style.display = "block";
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.style.display = "none"; }, 2200);
+}
+function updateHUD() {
+  document.getElementById("money").textContent = "💰 " + save.coins;
+  document.getElementById("level").textContent = `⭐ Lv ${save.level} · ${save.xp} XP`;
+}
+function updateHeldLabel() {
+  const label = CROPS[heldItem]?.name || (heldItem === "watering_can" ? "Bình tưới" : heldItem === "shovel" ? "Xẻng" : "Tay");
+  document.getElementById("held").textContent = "Cầm: " + label;
+}
+function buildHotbar() {
+  const bar = document.getElementById("hotbar");
+  const ids = Object.keys(CROPS);
+  bar.innerHTML = "";
+  ids.forEach((id, i) => {
+    const n = save.seeds[id] || 0;
+    if (n <= 0 && i > 1) return;
+    const slot = document.createElement("div");
+    slot.className = "slot" + (heldItem === id ? " on" : "");
+    slot.textContent = CROPS[id].emoji;
+    const b = document.createElement("b");
+    b.textContent = n;
+    slot.appendChild(b);
+    slot.onclick = () => {
+      if (n > 0) { heldItem = id; setHeldVisual(id); updateHeldLabel(); buildHotbar(); }
+    };
+    bar.appendChild(slot);
+  });
+}
+function updatePrompt() {
+  const el = document.getElementById("prompt");
+  if (nearShop()) { el.style.display = "block"; el.textContent = "[E] Mở cửa hàng"; return; }
+  if (nearBuyer()) { el.style.display = "block"; el.textContent = "[E] Bán nông sản"; return; }
+  const p = nearestPlot();
+  if (p) {
+    const data = save.plots[p.key];
+    if (!data) { el.style.display = "block"; el.textContent = "[E] Gieo hạt"; return; }
+    const elapsed = (Date.now() - data.plantedAt) / 1000 + (data.boost || 0);
+    const progress = Math.min(1, elapsed / CROPS[data.crop].grow);
+    if (progress >= 1) { el.style.display = "block"; el.textContent = "[E] Thu hoạch " + CROPS[data.crop].emoji; return; }
+    el.style.display = "block";
+    el.textContent = CROPS[data.crop].emoji + " " + Math.floor(progress * 100) + "%  ·  [E] Tưới";
+    return;
+  }
+  el.style.display = "none";
+}
+
+// ═══════════════ WEATHER ═══════════════
+const rainDrops = [];
+function initRain() {
+  for (let i = 0; i < 200; i++) {
+    const d = box(0.03, 0.25, 0.03, 0xa0d0ff, { transparent: true, opacity: 0.5 });
+    d.position.set((Math.random() - 0.5) * 60, Math.random() * 20, (Math.random() - 0.5) * 60);
+    d.visible = false;
+    scene.add(d);
+    rainDrops.push(d);
+  }
+}
+initRain();
+
+function setWeather(w) {
+  weather = w;
+  const badge = document.getElementById("weather-badge");
+  if (w === "sunny") {
+    badge.textContent = "☀️ Nắng";
+    scene.background.copy(skyDay);
+    scene.fog.color.copy(skyDay);
+    sun.intensity = 1.35;
+    hemi.intensity = 0.7;
+    rainDrops.forEach(d => d.visible = false);
+  } else if (w === "rain") {
+    badge.textContent = "🌧️ Mưa";
+    const c = new THREE.Color(0x6a8aaa);
+    scene.background.copy(c);
+    scene.fog.color.copy(c);
+    sun.intensity = 0.5;
+    hemi.intensity = 0.45;
+    rainDrops.forEach(d => d.visible = true);
+  } else {
+    badge.textContent = "🌙 Đêm";
+    scene.background.copy(skyNight);
+    scene.fog.color.copy(skyNight);
+    sun.intensity = 0.25;
+    hemi.intensity = 0.3;
+    rainDrops.forEach(d => d.visible = false);
+  }
+}
+
+// ═══════════════ LOOP ═══════════════
+const clock = new THREE.Clock();
+let lastPlantRefresh = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, clock.getDelta());
+  animT += dt;
+  weatherT += dt;
+
+  // weather cycle every ~90s
+  if (weatherT > 90) {
+    weatherT = 0;
+    const opts = ["sunny", "sunny", "rain", "night"];
+    setWeather(opts[Math.floor(Math.random() * opts.length)]);
+  }
+
+  // movement
+  let ix = 0, iz = 0;
+  if (keys["KeyW"] || keys["ArrowUp"]) iz -= 1;
+  if (keys["KeyS"] || keys["ArrowDown"]) iz += 1;
+  if (keys["KeyA"] || keys["ArrowLeft"]) ix -= 1;
+  if (keys["KeyD"] || keys["ArrowRight"]) ix += 1;
+  if (joy.active) { ix += joy.x; iz += joy.y; }
+
+  const len = Math.hypot(ix, iz);
+  let moving = len > 0.05;
+  if (moving) {
+    ix /= len; iz /= len;
+    const speed = (running || keys["ShiftLeft"] || keys["ShiftRight"] ? 7.8 : 4.4) * (save.pet === "bunny" ? 1.06 : 1);
+    const s = Math.sin(yaw), c = Math.cos(yaw);
+    const mx = ix * c + iz * s;
+    const mz = -ix * s + iz * c;
+    const nx = player.position.x + mx * speed * dt;
+    const nz = player.position.z + mz * speed * dt;
+    if (!blocked(nx, player.position.z)) player.position.x = nx;
+    if (!blocked(player.position.x, nz)) player.position.z = nz;
+    player.rotation.y = Math.atan2(mx, mz);
+  }
+
+  if (keys["Space"] && onGround) { velY = 7.5; onGround = false; }
+  velY -= 22 * dt;
+  player.position.y += velY * dt;
+  if (player.position.y <= 0) { player.position.y = 0; velY = 0; onGround = true; }
+
+  const swing = moving ? Math.sin(animT * (running ? 13 : 9)) * 0.5 : 0;
+  legL.rotation.x = swing;
+  legR.rotation.x = -swing;
+  armL.rotation.x = -swing * 0.75;
+  armR.rotation.x = swing * 0.75;
+
+  // camera follow
+  const camDist = 9.5;
+  const camH = 4.8;
+  const tx = player.position.x + Math.sin(yaw) * camDist;
+  const tz = player.position.z + Math.cos(yaw) * camDist;
+  const ty = player.position.y + camH + Math.sin(pitch) * 3;
+  camera.position.lerp(new THREE.Vector3(tx, ty, tz), 1 - Math.pow(0.0008, dt));
+  camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
+
+  // pet
+  if (petMesh) {
+    const target = new THREE.Vector3(
+      player.position.x - Math.sin(player.rotation.y) * 1.5,
+      0,
+      player.position.z - Math.cos(player.rotation.y) * 1.5
+    );
+    petMesh.position.lerp(target, 1 - Math.pow(0.015, dt));
+    petMesh.lookAt(player.position.x, 0.4, player.position.z);
+  }
+
+  // water shimmer
+  water.material.opacity = 0.72 + Math.sin(animT * 1.8) * 0.1;
+  water.material.emissive = new THREE.Color(0x1a6080);
+  water.material.emissiveIntensity = 0.05 + Math.sin(animT) * 0.03;
+
+  // clouds drift
+  for (const cl of clouds) {
+    cl.mesh.position.x += cl.speed * dt;
+    if (cl.mesh.position.x > 45) cl.mesh.position.x = -45;
+  }
+
+  // rain
+  if (weather === "rain") {
+    for (const d of rainDrops) {
+      d.position.y -= 18 * dt;
+      if (d.position.y < 0) {
+        d.position.y = 15 + Math.random() * 8;
+        d.position.x = (Math.random() - 0.5) * 60;
+        d.position.z = (Math.random() - 0.5) * 60;
+      }
+    }
+  }
+
+  // particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    p.vy -= 8 * dt;
+    p.mesh.position.x += p.vx * dt;
+    p.mesh.position.y += p.vy * dt;
+    p.mesh.position.z += p.vz * dt;
+    if (p.life <= 0) {
+      scene.remove(p.mesh);
+      particles.splice(i, 1);
+    }
+  }
+
+  // ready glow pulse
+  for (const key of Object.keys(plantGroups)) {
+    const g = plantGroups[key];
+    if (!g) continue;
+    const glow = g.getObjectByName("readyGlow");
+    if (glow) {
+      glow.rotation.z = animT * 0.8;
+      glow.material.opacity = 0.45 + Math.sin(animT * 3) * 0.3;
+      glow.scale.setScalar(1 + Math.sin(animT * 2.5) * 0.08);
+    }
+  }
+
+  // NPC idle bob
+  vendor.position.y = Math.sin(animT * 1.5) * 0.03;
+  buyer.position.y = Math.sin(animT * 1.5 + 1) * 0.03;
+
+  lastPlantRefresh += dt;
+  if (lastPlantRefresh > 1) {
+    lastPlantRefresh = 0;
+    refreshAllPlots();
+    if (save.pet === "bunny") {
+      for (const k of Object.keys(save.plots)) {
+        save.plots[k].boost = (save.plots[k].boost || 0) + 0.12;
+      }
+    }
+  }
+
+  updatePrompt();
+  renderer.render(scene, camera);
+}
+
+function onResize() {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+window.addEventListener("resize", onResize);
+
+document.getElementById("play").onclick = () => {
+  document.getElementById("start").style.display = "none";
+  updateHUD();
+  buildHotbar();
+  updateHeldLabel();
+  setWeather("sunny");
+  animate();
+  toast("Chào mừng đến khu vườn! 🌱");
+};
+
+renderer.render(scene, camera);
+</script>
+</body>
+</html>
